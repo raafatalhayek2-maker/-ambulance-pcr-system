@@ -1,0 +1,61 @@
+<!doctype html>
+<html><head>
+<meta charset="utf-8" />
+<title>SAMPLE Discharge Facesheet — DEMO ONLY</title>
+<style>
+  @page { size: Letter; margin: 14mm; }
+  body { font: 12px/1.45 -apple-system, system-ui, "Segoe UI", Arial, sans-serif; color:#0f172a; padding: 8px; }
+  .demo { background:#fff7ed; color:#9a3412; border:1px solid #fed7aa; padding: 6px 10px;
+          font-weight: 600; font-size: 11px; border-radius: 6px; margin-bottom: 14px; text-align:center; }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  .sub { color:#64748b; font-size: 11px; margin-bottom: 12px; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 12px; }
+  th, td { text-align:left; vertical-align: top; padding: 6px 8px; border:1px solid #cbd5e1; }
+  th { background:#f1f5f9; font-weight: 600; width: 38%; }
+  h2 { font-size: 13px; margin: 14px 0 4px; color:#0B5FFF; border-bottom:1px solid #cbd5e1; padding-bottom: 3px; }
+  .footer { margin-top: 22px; color:#94a3b8; font-size: 10px; text-align:center; }
+  .print-btn { position: fixed; top: 12px; right: 12px; background:#0B5FFF; color:#fff; padding: 8px 14px;
+               border-radius: 8px; border:0; font-weight:600; cursor:pointer; }
+  @media print { .print-btn { display:none; } }
+</style></head><body>
+<button class="print-btn" onclick="window.print()">🖨️ Print</button>
+
+<div class="demo">DEMO — Sample data only. Not a real discharge facesheet. Not for real patient information.</div>
+
+<h1>Sample General Hospital — Discharge Facesheet</h1>
+<div class="sub">Date of discharge: 04/29/2026 · Encounter # ENC-DEMO-9991</div>
+
+<h2>Patient Information</h2>
+<table>
+  <tr><th>Patient name</th><td>John Demo</td></tr>
+  <tr><th>Date of birth</th><td>04/12/1948</td></tr>
+  <tr><th>Age</th><td>77</td></tr>
+  <tr><th>MRN</th><td>MRN-DEMO-001</td></tr>
+  <tr><th>Insurance</th><td>Medicare (DEMO)</td></tr>
+  <tr><th>Primary care</th><td>Dr. Sample (Demo Internal Medicine)</td></tr>
+</table>
+
+<h2>Discharge Disposition</h2>
+<table>
+  <tr><th>Discharging from</th><td>Sample General Hospital, 100 Sample St, Demo City, NY 10001</td></tr>
+  <tr><th>Discharging to</th><td>Sunset Demo Nursing Home, 250 Sunset Ave, Demo City, NY 10002</td></tr>
+  <tr><th>Mode of transport</th><td>Non-emergent ambulance, hospital discharge</td></tr>
+</table>
+
+<h2>Diagnosis &amp; Reason for Transport</h2>
+<table>
+  <tr><th>Primary diagnosis</th><td>Congestive Heart Failure (CHF), stable on discharge</td></tr>
+  <tr><th>Secondary diagnoses</th><td>HTN, Type 2 DM (sample)</td></tr>
+  <tr><th>Reason for transport</th><td>Hospital discharge to nursing facility</td></tr>
+</table>
+
+<h2>Discharge Instructions</h2>
+<table>
+  <tr><th>Diet</th><td>Cardiac, low sodium</td></tr>
+  <tr><th>Activity</th><td>Bed-confined; up to chair with assistance</td></tr>
+  <tr><th>Medications</th><td>Continue home meds (sample list provided to receiving facility)</td></tr>
+  <tr><th>Follow-up</th><td>Cardiology follow-up in 7–10 days</td></tr>
+</table>
+
+<div class="footer">DEMO — Generated for PCR Pilot live demo. Not for real patient information.</div>
+</body></html>

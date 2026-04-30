@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body { height: 100%; }
+body {
+  background: #f7f8fb;
+  color: #0f172a;
+  -webkit-tap-highlight-color: transparent;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Form controls — mobile-first, large tap targets */
+.input, .select, .textarea {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  background: #fff;
+  font-size: 16px;            /* prevents iOS zoom */
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.textarea { min-height: 96px; padding: 12px 14px; resize: vertical; }
+.input:focus, .select:focus, .textarea:focus {
+  border-color: #0B5FFF;
+  box-shadow: 0 0 0 3px rgba(11,95,255,0.18);
+}
+.label { display:block; font-size: 13px; font-weight: 600; color:#334155; margin-bottom: 6px; }
+
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  min-height: 48px; padding: 0 16px; border-radius: 12px; font-weight: 600;
+  font-size: 16px; transition: transform 0.05s, background 0.15s; cursor:pointer;
+  border: 1px solid transparent; user-select:none; }
+.btn:active { transform: scale(0.98); }
+.btn-primary { background:#0B5FFF; color:#fff; }
+.btn-primary:hover { background:#084ad6; }
+.btn-secondary { background:#fff; color:#0f172a; border-color:#d1d5db; }
+.btn-secondary:hover { background:#f1f5f9; }
+.btn-success { background:#16a34a; color:#fff; }
+.btn-warn { background:#d97706; color:#fff; }
+.btn-danger { background:#dc2626; color:#fff; }
+.btn-ghost { background:transparent; color:#0B5FFF; }
+
+.chip { display:inline-flex; align-items:center; gap:6px; padding: 4px 10px;
+  border-radius: 999px; font-size: 12px; font-weight: 600; }
+.chip-success { background:#dcfce7; color:#166534; }
+.chip-warn    { background:#fef3c7; color:#92400e; }
+.chip-info    { background:#dbe7ff; color:#1e3a8a; }
+.chip-err     { background:#fee2e2; color:#991b1b; }
+.chip-muted   { background:#e5e7eb; color:#374151; }
+
+.card { background:#fff; border:1px solid #e5e7eb; border-radius: 16px; padding: 16px;
+  box-shadow: 0 1px 2px rgba(15,23,42,0.04); }
+
+.section-toggle { display:flex; align-items:center; justify-content:space-between;
+  width:100%; padding: 14px 16px; background:#fff; border:1px solid #e5e7eb;
+  border-radius: 16px; font-weight: 600; cursor:pointer; }
+
+/* Auto-fill badge */
+.autofill-badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+  background:#dcfce7; color:#166534; margin-left: 8px; vertical-align: middle; }
+
+/* Sticky bottom action bar */
+.sticky-actions { position: sticky; bottom: 0; left:0; right:0;
+  background: #ffffffee; backdrop-filter: blur(8px);
+  border-top: 1px solid #e5e7eb; padding: 12px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px; z-index: 30; }
+
+/* Demo banner */
+.demo-banner { background:#fff7ed; color:#9a3412; border-bottom:1px solid #fed7aa;
+  font-size: 12px; font-weight: 600; padding: 6px 12px; text-align:center; }
+
+/* Recording indicator */
+.rec-dot { width:14px; height:14px; border-radius:999px; background:#dc2626;
+  animation: pulseRec 1.4s ease-in-out infinite; }
