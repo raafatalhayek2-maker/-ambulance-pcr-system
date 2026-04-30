@@ -19,14 +19,15 @@ Supervisors get a dashboard of all PCRs with KPIs, filters, and a one-tap "Mark 
 - **Next.js 14** (App Router, TypeScript) — frontend + API routes
 - **Tailwind CSS** — mobile-first styles
 - **Supabase** — Postgres + Storage (free tier is plenty for the demo)
-- **OpenAI**
-  - **Whisper** for voice transcription
-  - **GPT-4o-mini** for structured field extraction + narrative generation + vision OCR fallback
+- **Anthropic Claude** (`claude-sonnet-4-20250514`)
+  - **Vision** for image-based OCR field extraction (fallback when Tesseract fails)
+  - **Claude** for structured field extraction from OCR text + narrative generation
+- **OpenAI Whisper** (optional) — for voice transcription. If `OPENAI_API_KEY` is set, Whisper is used; otherwise voice upload is stored but not transcribed.
 - **Tesseract.js** — primary OCR engine, runs in-process
 - **Puppeteer + @sparticuz/chromium** — server-side PDF export
 - **OpenStreetMap Nominatim** — free address autocomplete (swap for Google Places later if you provide a key)
 
-No accounts/integrations beyond Supabase and OpenAI are needed.
+No accounts/integrations beyond Supabase and Anthropic are needed. OpenAI is optional (only for Whisper transcription).
 
 ---
 
@@ -34,7 +35,8 @@ No accounts/integrations beyond Supabase and OpenAI are needed.
 
 - Node.js 18.17 or later
 - A free Supabase project (https://supabase.com)
-- An OpenAI API key (https://platform.openai.com)
+- An Anthropic API key (https://console.anthropic.com) — **required**
+- An OpenAI API key (https://platform.openai.com) — **optional**, only for voice transcription
 
 ---
 
@@ -43,11 +45,11 @@ No accounts/integrations beyond Supabase and OpenAI are needed.
 ```bash
 git clone <this-repo> pcr-pilot
 cd pcr-pilot
-npm install
+npm install --legacy-peer-deps
 cp .env.example .env.local
 ```
 
-Edit `.env.local` and fill in the four required variables (see comments inside).
+Edit `.env.local` and fill in the required variables (see comments inside).
 
 ### 1a. Create the Supabase database
 
@@ -97,7 +99,7 @@ npm install -g vercel
 vercel
 ```
 
-Then in the **Vercel Project → Settings → Environment Variables** add the 4 vars from `.env.example`:
+Then in the **Vercel Project → Settings → Environment Variables** add the vars from `.env.example`:
 
 | Name | Value |
 | ---- | ----- |
@@ -105,7 +107,8 @@ Then in the **Vercel Project → Settings → Environment Variables** add the 4 
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server-only) |
 | `SUPABASE_STORAGE_BUCKET` | `pcr-uploads` |
-| `OPENAI_API_KEY` | Your OpenAI key |
+| `ANTHROPIC_API_KEY` | Your Anthropic (Claude) API key — **required** |
+| `OPENAI_API_KEY` | Your OpenAI key — **optional** (only for Whisper voice transcription) |
 
 Redeploy. Your phones can now hit the public Vercel URL.
 
@@ -118,7 +121,7 @@ Redeploy. Your phones can now hit the public Vercel URL.
 | Username | Password | Role | Name |
 | -------- | -------- | ---- | ---- |
 | `emt1` | `demo123` | EMT | David Demo |
-| `emt2` | `demo123` | EMT | Raafat Sample |
+| `emt2` | `demo123` | EMT | Raafat Alhayek |
 | `sup1` | `demo123` | Supervisor | Sam Supervisor |
 
 Demo passwords are stored **plaintext** in the database for the live demo only. **Never** use this pattern in production.
@@ -137,16 +140,16 @@ Demo passwords are stored **plaintext** in the database for the live demo only. 
 - 📷 button uses `<input type="file" accept="image/*" capture="environment">` to launch the rear camera on iOS/Android.
 - Image uploads to `/api/ocr`. Pipeline:
   1. **Tesseract.js** runs OCR locally on the server.
-  2. If output is empty or fewer than ~30 alphanumeric chars (i.e. garbled), fall back to **GPT-4o-mini vision** on the raw image.
-  3. OCR text → GPT-4o-mini structured extractor → JSON of the 12 patient/trip fields (each `null` if not confidently found).
+  2. If output is empty or fewer than ~30 alphanumeric chars (i.e. garbled), fall back to **Claude Vision** on the raw image.
+  3. OCR text → Claude structured extractor → JSON of the 12 patient/trip fields (each `null` if not confidently found).
 - Form fields stagger-fade in with a green **Auto-filled** badge that disappears when the user edits the field.
 - Original image + OCR text stored in `pcr_attachments`.
 
 ### Flow 3 — Voice note auto-fill (anti-hallucination)
 - 🎙️ button uses `MediaRecorder` (and accepts file uploads as fallback).
 - Audio uploads to `/api/transcribe`. Pipeline:
-  1. **Whisper** transcribes the audio.
-  2. GPT-4o-mini extracts clinical fields with **strict** anti-invention rules (literal text from the spec):
+  1. **Whisper** (OpenAI) transcribes the audio if `OPENAI_API_KEY` is set.
+  2. Claude extracts clinical fields with **strict** anti-invention rules:
      - "Only fill a field if the EMT explicitly stated information for it in the transcript."
      - Vitals → `'Vitals not provided'` if not mentioned.
      - Interventions → `'No interventions documented'` if none.
@@ -162,7 +165,7 @@ Demo passwords are stored **plaintext** in the database for the live demo only. 
 
 ### Flow 5 — Missing info, narrative, PDF, supervisor review
 - **Check for Missing Info** scans the form for: pickup/dropoff time, mileage, signatures, vitals (= sentinel string), destination address, reason for transport, transfer of care. Yellow chips appear at the top, each tappable to scroll to its field.
-- **Generate Narrative** posts the form to GPT-4o-mini with a strict "use only data on the form; otherwise write 'not documented'" prompt — no invention, no extra clinical claims.
+- **Generate Narrative** posts the form to Claude with a strict "use only data on the form; otherwise write 'not documented'" prompt — no invention, no extra clinical claims.
 - **Export PDF** hits `/api/pcr/[id]/pdf` which renders a **pinned HTML template** through Chromium headless. Layout is defined once in code; do not regenerate.
 - **Supervisor → row → Mark as Reviewed** flips status to `Completed` and writes an `audit_log` row.
 
@@ -220,7 +223,8 @@ A trigger keeps `pcrs.updated_at` current on every UPDATE.
 
 For a single demo session (5–10 PCRs):
 
-- **OpenAI**: a few cents (Whisper + a handful of GPT-4o-mini calls).
+- **Anthropic**: a few cents (a handful of Claude API calls for OCR extraction + narrative).
+- **OpenAI** (optional): a few cents for Whisper transcription if you use voice notes.
 - **Supabase**: free tier.
 - **Vercel**: free tier — but PDF export and large OCR images can hit the 10 s function limit on Free; bump to Pro if you need longer.
 
@@ -232,11 +236,13 @@ For a single demo session (5–10 PCRs):
 
 **Microphone access denied** → iOS Safari requires HTTPS and a real user tap on the 🎙️ button.
 
-**OCR returns nothing useful** → the Tesseract+vision fallback handles most cases. If the photo is blurry or extreme angle, the vision model still works because it sees the raw image directly. If you must, retake the photo with better lighting.
+**OCR returns nothing useful** → the Tesseract+Claude vision fallback handles most cases. If the photo is blurry or extreme angle, the vision model still works because it sees the raw image directly. If you must, retake the photo with better lighting.
 
 **PDF export 500s on Vercel Free** → upgrade to Pro (timeout) or run `npm run dev` locally for the demo PDF.
 
 **Supabase storage upload fails** → confirm the bucket exists and is public. The OCR/transcribe routes will still extract fields even if upload fails, but attachments won't be retrievable.
+
+**Voice transcription returns empty** → make sure `OPENAI_API_KEY` is set in your environment. Anthropic does not yet support audio transcription, so Whisper (OpenAI) is used for that step.
 
 ---
 

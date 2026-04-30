@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase';
-import { openai } from '@/lib/openai';
+import { generateNarrative } from '@/lib/openai';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
-
-const SYSTEM = `You are an EMS documentation assistant. You write a clean, medical-legal PCR narrative paragraph using ONLY the data the user provides. You MUST follow these rules:
-- Use ONLY facts present in the supplied form fields. Do not invent any clinical data, vital signs, or events.
-- If a field is missing or empty, write the explicit phrase: "not documented" in that part of the narrative (e.g. "Vitals not documented.", "Transfer of care not documented.").
-- Output should follow this overall structure as a single paragraph:
-  "Patient was transported [trip type] from [pickup facility] to [destination facility]. Upon arrival, patient was found [condition]. Patient was [mental status], breathing normally, and in [distress status]. Patient denied chest pain, shortness of breath, dizziness, or acute complaints. [Interventions]. Patient was secured appropriately and transported without incident. Care was transferred to receiving staff at destination."
-- If a phrase like "[distress status]" cannot be inferred from the data, replace it with "no apparent distress" only if patient_condition or assessment supports it; otherwise use "distress not documented".
-- Output ONLY the paragraph. No headings, no bullet points.`;
 
 export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -37,15 +29,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       diagnosis: p.diagnosis,
     };
 
-    const client = openai();
-    const completion = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: SYSTEM },
-        { role: 'user', content: `Form facts (JSON):\n${JSON.stringify(facts, null, 2)}\n\nWrite the narrative now.` },
-      ],
-    });
-    const narrative = (completion.choices[0]?.message?.content || '').trim();
+    const narrative = await generateNarrative(facts);
     await sb.from('pcrs').update({ generated_narrative: narrative }).eq('id', params.id);
     return NextResponse.json({ narrative });
   } catch (e: any) {

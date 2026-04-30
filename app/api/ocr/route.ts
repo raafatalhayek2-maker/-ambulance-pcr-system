@@ -2,37 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuid } from 'uuid';
 import { createWorker } from 'tesseract.js';
 import { getServerSupabase, STORAGE_BUCKET } from '@/lib/supabase';
-import { openai } from '@/lib/openai';
+import { extractFieldsFromOCR, extractFieldsFromImage } from '@/lib/openai';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
-
-const EXTRACTION_SYSTEM = `You extract structured fields from EMS/medical paperwork (discharge summaries, facesheets, transfer paperwork) for a DEMO ePCR application. Return ONLY a JSON object matching the schema. Each field must be \`null\` if not confidently found in the text. NEVER invent values.`;
-
-const EXTRACTION_USER = (text: string) => `Extract these fields from the document text below. If a field is not present or you are not confident, set it to null. Use the exact wording from the document where possible.
-
-Schema:
-{
-  "patient_name": string|null,
-  "dob": string|null,                       // any format the document uses
-  "age": string|null,
-  "mrn": string|null,
-  "insurance": string|null,
-  "pickup_facility": string|null,
-  "pickup_address": string|null,
-  "destination_facility": string|null,
-  "destination_address": string|null,
-  "reason_for_transport": string|null,
-  "diagnosis": string|null,
-  "discharge_instructions": string|null
-}
-
-Document text:
-"""
-${text}
-"""
-
-Return ONLY the JSON object. No prose.`;
 
 function isGarbledOrEmpty(text: string): boolean {
   if (!text) return true;
@@ -51,43 +24,6 @@ async function extractWithTesseract(buffer: Buffer): Promise<string> {
   } finally {
     await worker.terminate();
   }
-}
-
-async function extractWithVisionFallback(dataUrl: string): Promise<{ text: string; extracted: any }> {
-  const client = openai();
-  // Single vision call: extract structured JSON directly from the image.
-  const completion = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
-    response_format: { type: 'json_object' },
-    messages: [
-      { role: 'system', content: EXTRACTION_SYSTEM },
-      {
-        role: 'user',
-        content: [
-          { type: 'text', text: EXTRACTION_USER('(image only — extract directly from the photo)') },
-          { type: 'image_url', image_url: { url: dataUrl } },
-        ] as any,
-      },
-    ],
-  });
-  const raw = completion.choices[0]?.message?.content || '{}';
-  let parsed: any = {};
-  try { parsed = JSON.parse(raw); } catch { parsed = {}; }
-  return { text: '(vision-extracted, no OCR text)', extracted: parsed };
-}
-
-async function extractStructuredFromText(text: string): Promise<any> {
-  const client = openai();
-  const completion = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
-    response_format: { type: 'json_object' },
-    messages: [
-      { role: 'system', content: EXTRACTION_SYSTEM },
-      { role: 'user', content: EXTRACTION_USER(text) },
-    ],
-  });
-  const raw = completion.choices[0]?.message?.content || '{}';
-  try { return JSON.parse(raw); } catch { return {}; }
 }
 
 export async function POST(req: NextRequest) {
@@ -125,14 +61,14 @@ export async function POST(req: NextRequest) {
     }
 
     if (isGarbledOrEmpty(ocrText)) {
-      // 3) Vision fallback
-      const dataUrl = `data:${file.type || 'image/jpeg'};base64,${buf.toString('base64')}`;
-      const out = await extractWithVisionFallback(dataUrl);
-      ocrText = ocrText || out.text;
-      extracted = out.extracted;
+      // 3) Vision fallback — use Claude vision
+      const base64Image = buf.toString('base64');
+      const mediaType = file.type || 'image/jpeg';
+      extracted = await extractFieldsFromImage(base64Image, mediaType);
+      ocrText = ocrText || '(vision-extracted, no OCR text)';
     } else {
-      // 3b) Send OCR text to LLM for structured extraction
-      extracted = await extractStructuredFromText(ocrText);
+      // 3b) Send OCR text to Claude for structured extraction
+      extracted = await extractFieldsFromOCR(ocrText);
     }
 
     // 4) Persist attachment row
