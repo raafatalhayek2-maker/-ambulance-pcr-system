@@ -61,6 +61,22 @@ export default function PcrEditor() {
     });
   }
 
+  // Handler for new CameraButton interface: receives a File, uploads to OCR API
+  async function handleCameraCapture(file: File) {
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('pcr_id', id);
+      const res = await fetch('/api/ocr', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'OCR failed');
+      applyAutofill(data.extracted || {});
+      pushToast('Document scanned. Fields auto-filled.', 'ok');
+    } catch (e: any) {
+      pushToast(e?.message || 'OCR failed', 'err');
+    }
+  }
+
   // Auto-mileage when both lat/lng present
   useEffect(() => {
     if (!pcr) return;
@@ -160,7 +176,7 @@ export default function PcrEditor() {
 
       {/* Capture buttons up top */}
       <div className="grid grid-cols-1 gap-2 mb-4">
-        <CameraButton pcrId={pcr.id} onExtracted={applyAutofill} />
+        <CameraButton onCapture={handleCameraCapture} />
         <VoiceRecorder pcrId={pcr.id} onExtracted={applyAutofill} />
       </div>
 

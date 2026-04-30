@@ -1,83 +1,55 @@
-'use client';
-import { useRef, useState } from 'react';
-import { pushToast } from './Toast';
-
-interface Props {
-  pcrId: string;
-  /** Called with extracted JSON from the OCR pipeline */
-  onExtracted: (data: Record<string, any>) => void;
-  disabled?: boolean;
+"use client";
+import { useRef, useState } from "react";
+interface CameraButtonProps {
+  onCapture: (file: File) => void;
+  loading?: boolean;
 }
-
-export default function CameraButton({ pcrId, onExtracted, disabled }: Props) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [file, setFile] = useState<File | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [stage, setStage] = useState<string>('');
-
-  function pickFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    setFile(f);
-    setPreview(URL.createObjectURL(f));
-  }
-
-  function retake() {
-    setPreview(null); setFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  }
-
-  async function confirmUpload() {
+export default function CameraButton({ onCapture, loading }: CameraButtonProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const handleClick = () => {
+    inputRef.current?.click();
+  };
+  const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
-    setBusy(true);
-    setStage('Uploading photo…');
+    setIsProcessing(true);
     try {
-      const fd = new FormData();
-      fd.append('file', file);
-      fd.append('pcr_id', pcrId);
-      setStage('Reading document…');
-      const res = await fetch('/api/ocr', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'OCR failed');
-      onExtracted(data.extracted || {});
-      pushToast('Document scanned. Fields auto-filled.', 'ok');
-      retake();
-    } catch (e: any) {
-      pushToast(e?.message || 'OCR failed', 'err');
+      await onCapture(file);
     } finally {
-      setBusy(false); setStage('');
+      setIsProcessing(false);
+      // Reset input so same file can be re-selected
+      if (inputRef.current) inputRef.current.value = "";
     }
-  }
-
+  };
+  const busy = loading || isProcessing;
   return (
-    <div className="space-y-2">
-      <input ref={fileInputRef} type="file" accept="image/*" capture="environment"
-             onChange={pickFile} className="hidden" />
-      {!preview && (
-        <button type="button" disabled={disabled || busy}
-                onClick={() => fileInputRef.current?.click()}
-                className="btn btn-primary w-full !min-h-14 text-base">
-          📷 Scan Document
-        </button>
-      )}
-
-      {preview && !busy && (
-        <div className="card space-y-2">
-          <img src={preview} alt="Captured" className="rounded-xl w-full max-h-72 object-contain bg-slate-100" />
-          <div className="grid grid-cols-2 gap-2">
-            <button type="button" onClick={retake} className="btn btn-secondary">Retake</button>
-            <button type="button" onClick={confirmUpload} className="btn btn-success">Use this photo</button>
-          </div>
-        </div>
-      )}
-
-      {busy && (
-        <div className="card flex items-center gap-3">
-          <div className="w-5 h-5 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
-          <div className="text-sm text-slate-700">{stage || 'Processing…'}</div>
-        </div>
-      )}
-    </div>
+    <>
+      {/* Hidden file input - NO capture attribute so user can choose camera OR library */}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*,application/pdf"
+        className="hidden"
+        onChange={handleChange}
+        aria-hidden="true"
+      />
+      <button
+        onClick={handleClick}
+        disabled={busy}
+        className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3 px-4 rounded-xl transition-colors"
+      >
+        {busy ? (
+          <>
+            <span className="animate-spin text-lg">⏳</span>
+            Reading document...
+          </>
+        ) : (
+          <>
+            📷 Scan Document
+          </>
+        )}
+      </button>
+    </>
   );
 }
