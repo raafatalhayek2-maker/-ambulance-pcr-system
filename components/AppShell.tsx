@@ -27,6 +27,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const home = user.role === 'supervisor' ? '/supervisor' : '/emt';
+  const nav = [
+    { href: home, label: 'PCRs' },
+    { href: '/operations', label: 'Ops' },
+    { href: '/time-clock', label: 'Clock' },
+    { href: '/payroll', label: 'Payroll' },
+  ];
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -49,6 +55,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <button onClick={logout} className="btn btn-secondary !min-h-9 !py-1 !px-3 text-sm">Sign out</button>
           </div>
         </div>
+        <nav className="max-w-2xl mx-auto px-4 pb-3 flex gap-2 overflow-x-auto">
+          {nav.map(item => {
+            const active = pathname === item.href || (item.href !== home && pathname.startsWith(item.href));
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={"chip whitespace-nowrap " + (active ? 'chip-info' : 'chip-muted')}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
       </header>
 
       <main className="flex-1">
